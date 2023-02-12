@@ -1,9 +1,30 @@
 # ml_utils
 Stuff I'm making to hopefully make my job easier.
 
-Metrics.py is pretty much bug proof, but I haven't tested every scenario in Dataset_prep.py. I also want to add video pre processing eventually.
+Metrics.py is pretty much bug proof, but I haven't tested every scenario in Dataset_prep.py.
 
-## GET METRICS
+## DATASET PREP
+
+It needs the directory where the dataset is, and the structure must be: dataset -> folders for classes. It can deal with .npy files and images (theoretically, I haven't tested the images), I also want to add video pre processing eventually.
+
+def from_folders_to_split(base_dir,print_=False,save_all=False,img=False,val=False,split_train=0.7,split_val=0.2,one_class=False,save_dir=None,which_class=None):
+
+The breakdown on the other arguments:
+
+- print_ : will print updates on the matrices' shapes if True (default = False)
+- save_all : saves the matrices in each step of the process (class concatenation, train/test splitting in each class, and final concatenation) in subfolders (default = False)
+- img : if the dataset is of images (default = False)
+- val : if you want to include a validation set (default = False)
+- split_train : percentage for training (default = 0.7)
+- split_val : percentag for validation, if applicable (default = 0.2)
+- one_class : set as True if it's a one class model (default = False)
+- save_dir : really recommend having one, unless you don't mind a huge mess because by default it'll save everything in the base_dir (default = None)
+- which_class : if it's a one class model, please specify which class is the training class, super important, I should probably even add an exception (default = None)
+
+## METRICS
+
+### get_metrics
+
 The main method is:
 
 get_metrics(y,Y_pred,threshold=None,which_output=0,print_=False,roc_curve=False,complete=False,smaller_than=True)
@@ -16,6 +37,8 @@ It receives the labels and the raw model prediction, and returns them. It does n
 - complete : will calculate the metrics associated with the confusion matrix if True (defalt = False)
 - smaller_than : will apply the threshold as a smaller than if True (default = True)
 
+### save_metrics
+
 The secondary method is:
 
 save_metrics(save_path,metrics,save_roc=False,print_=False)
@@ -23,6 +46,8 @@ save_metrics(save_path,metrics,save_roc=False,print_=False)
 It receives save path and the metrics dictionary. It can receive the following flags:
 - save_roc : will save the roc curve in a png file if True (defalt = False)
 - print : will print updates on the metrics if True (defalt = False)
+
+### save_mult_metrics
 
 And finally, for your convenience when comparing multiple sets of metrics to choose the best:
 
