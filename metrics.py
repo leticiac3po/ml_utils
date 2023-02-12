@@ -2,8 +2,8 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import cohen_kappa_score, roc_curve, auc, confusion_matrix, accuracy_score
 import numpy as np
 
-def _make_roc(y_true,Y_pred,metrics,roc_curve,which_output=0,print_=False):
-	if roc_curve:
+def _make_roc(y_true,Y_pred,metrics,roc_curve_,which_output=0,print_=False):
+	if roc_curve_:
 		if Y_pred.shape==(Y_pred.shape[0],2):
 			if which_output == 0:
 				fpr, tpr, thresholds = roc_curve(y_true, Y_pred[:,1], pos_label=1)
@@ -88,7 +88,7 @@ def _classify(Y_pred,threshold,smaller_than=True,which_output=0,print_=False):
 		print('-- Classified')
 	return y_pred
 
-def get_metrics(y,Y_pred,threshold=None,which_output=0,print_=False,roc_curve=False,complete=False,smaller_than=True):
+def get_metrics(y,Y_pred,threshold=None,which_output=0,print_=False,roc_curve_=False,complete=False,smaller_than=True):
 	metrics = {}
 	y_true = np.argmax(y, axis=-1)
 
@@ -105,7 +105,7 @@ def get_metrics(y,Y_pred,threshold=None,which_output=0,print_=False,roc_curve=Fa
 
 		metrics = _matrix_info(matrix,complete,acc,metrics,print_)
 
-	metrics = _make_roc(y_true,Y_pred,metrics,roc_curve,which_output,print_)
+	metrics = _make_roc(y_true,Y_pred,metrics,roc_curve_,which_output,print_)
 
 	return metrics
 
