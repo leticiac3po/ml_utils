@@ -3,8 +3,8 @@ import os, cv2
 
 # structure must be: dataset -> folders for classes
 # if it's a one class model: one_class = True and which_class = CLASS_FOLDER_NAME
-# prep(base_dir,print_=False,save_all=False,img=False,val=False,
-        # split_train=0.7,split_val=0.2,classes=2,one_class=False,save_dir=None,which_class=None)
+# def from_folders_to_split(base_dir,print_=False,save_all=False,img=False,val=False,split_train=0.7,
+        # split_val=0.2,one_class=False,save_dir=None,which_class=None):
 
 def _print_dic(data,print_):
     if print_:
@@ -14,6 +14,7 @@ def _print_dic(data,print_):
                 continue
             else:
                 print(key,data[key].shape)
+        print('-------------')
 
 def _shuffle_together(files):
     seed = np.random.randint(0, 10000)
@@ -44,18 +45,12 @@ def _is_train(one_class,class_,which_class):
     else:
         return True
 
-def _save_dic(save_dir,data,tag='',tag_in_dic=True):
-    if tag != '':
-        tag = '_' + tag
-    if tag_in_dic:
-        dic_tag = tag
-    else:
-        dic_tag = ''
+def _save_dic(save_dir,data):
     for key in data.keys():
         if 'name' in key:
-            _save_names(save_dir,key+tag+'.txt',data[key+dic_tag])
+            _save_names(save_dir,key+'.txt',data[key])
         else:
-            np.save(os.path.join(save_dir, key+tag+'.npy'),data[key+dic_tag])
+            np.save(os.path.join(save_dir, key+'.npy'),data[key])
 
 def _load_filenames(base_dir,filenames,tag=''):
     data = {}
@@ -65,11 +60,11 @@ def _load_filenames(base_dir,filenames,tag=''):
     for filename in filenames:
         key = filename.split('.')[0]
         if 'names' in key:
-            data[key+str(tag)] = _read_names(base_dir,filename+str(tag))
-            new_filenames.append(filename+str(tag)+'.txt')
+            data[key] = _read_names(base_dir,filename)
+            new_filenames.append(filename+'.txt')
         else:
-            data[key+str(tag)] = np.load(os.path.join(base_dir,filename+str(tag)+'.npy'))
-            new_filenames.append(filename+str(tag)+'.npy')
+            data[key] = np.load(os.path.join(base_dir,filename+'.npy'))
+            new_filenames.append(filename+'.npy')
     return data,new_filenames
 
 def _is_in_data(keys,key):
@@ -79,11 +74,10 @@ def _is_in_data(keys,key):
             return True
     return False
 
-
 def _load_from_dir(base_dir,data={}):
     keys = os.listdir(base_dir)
     for key in keys:
-        if not('.' in key) or _is_in_data(data.keys(),key):
+        if not('.' in key) or _is_in_data(data.keys(),key.split('.')[0]):
             continue
         if 'name' in key:
             data[key.split('.')[0]] = _read_names(base_dir,key.replace('.txt',''))
@@ -115,10 +109,39 @@ def _prep_split(tag,data,train,val,split_train,split_val):
             split = ['test','val']
     elif train:
         split = ['train','test']
+    else:
+        split = ['test']
 
     return fls,split_train,split_val, split
 
-def concat_one_folder(base_dir,print_=False,img=False,save_dir=None,tag=None):
+def _make_save_dirs(base_dir,save_dir,save_all):
+    if save_dir == None:
+        save_dir = base_dir
+    if save_all:
+        save_one = os.path.join(save_dir,'class_files')
+        save_two = os.path.join(save_dir,'class_files_split')
+        save_three = os.path.join(save_dir,'final_files')
+        if not os.path.exists(save_one):
+            os.mkdir(save_one)
+        if not os.path.exists(save_two):
+            os.mkdir(save_two)
+        if not os.path.exists(save_three):
+            os.mkdir(save_three)
+        return save_one, save_two, save_three
+    else:
+        return save_dir, save_dir, save_dir
+
+def _prep_concat(val):
+    if val:
+        split = ['train','test','val']
+    else:
+        split = ['train','test']
+
+    return split
+
+def concat_one_folder(base_dir,print_=False,img=False,save_dir=None,tag=''):
+    if tag != '':
+        tag = '_' + tag
     if save_dir == None:
         save_dir = base_dir
     files = os.listdir(base_dir)
@@ -126,26 +149,26 @@ def concat_one_folder(base_dir,print_=False,img=False,save_dir=None,tag=None):
     fl = np.expand_dims(fl,axis=0)
 
     data={}
-    data['data'] = np.zeros((1,fl.shape[1]))
-    data['lbls'] = np.zeros((1,1))
-    data['names'] = []
+    data['data'+tag] = np.zeros((1,fl.shape[1]))
+    data['lbls'+tag] = np.zeros((1,1))
+    data['names'+tag] = []
 
     for fl in files:
-        data['names'].append(os.path.join(base_dir, fl))
+        data['names'+tag].append(os.path.join(base_dir, fl))
         if img:
             fl = cv2.imread(os.path.join(base_dir, fl))
         else:
             fl = np.load(os.path.join(base_dir, fl))
         fl = np.expand_dims(fl,axis=0)
         lbls = np.full((fl.shape[0],1),0)
-        data['data'] = np.concatenate([data['data'],fl],axis=0)
-        data['lbls'] = np.concatenate([data['lbls'],lbls],axis=0)
+        data['data'+tag] = np.concatenate([data['data'+tag],fl],axis=0)
+        data['lbls'+tag] = np.concatenate([data['lbls'+tag],lbls],axis=0)
 
-    data['data'] = data['data'][1:]
-    data['lbls'] = data['lbls'][1:]
+    data['data'+tag] = data['data'+tag][1:]
+    data['lbls'+tag] = data['lbls'+tag][1:]
 
-    _shuffle_together([data['data'],data['lbls'],data['names']])
-    _save_dic(save_dir,data,tag=tag,tag_in_dic=False)
+    _shuffle_together([data['data'+tag],data['lbls'+tag],data['names'+tag]])
+    _save_dic(save_dir,data)
     _print_dic(data,print_)
     return list(data.keys())
 
@@ -171,6 +194,9 @@ def split_one_class(base_dir,filenames,train=True,val=False,split_train=0.7,spli
         for fl in fls:
             new_data['train_'+fl] = data[fl][:split_train]
             new_data['test_'+fl] = data[fl][split_train:]
+    else:
+        for fl in fls:
+            new_data['test_'+fl] = data[fl]
 
     for part in split:
         _shuffle_together([new_data[part+'_'+fls[0]],new_data[part+'_'+fls[1]],new_data[part+'_'+fls[2]]])
@@ -180,33 +206,13 @@ def split_one_class(base_dir,filenames,train=True,val=False,split_train=0.7,spli
     _print_dic(new_data,print_)
     return list(new_data.keys())
 
-def _prep_concat(val,one_class,data,base_dir,one_class_dir):
-    if val:
-        split = ['train','test','val']
-    else:
-        split = ['train','test']
-
-    if one_class and not(val):
-        if one_class_dir == None:
-            one_class_dir = base_dir
-        else:
-            _load_from_dir(one_class_dir,data)
-        keys = list(data.keys())
-        for key in keys:
-            if 'train' in key or 'test' in key or 'val' in key:
-                continue
-            data['test_'+key] = data[key]
-            data.pop(key)
-
-    return split
-
 def concat_classes_after_split(base_dir,class_names,val=False,save=True,save_dir=None,one_class=False,which_class=None,one_class_dir=None,print_=False):
     
     if save_dir == None:
         save_dir = base_dir
         
     data,filenames = _load_from_dir(base_dir)
-    split = _prep_concat(val,one_class,data,base_dir,one_class_dir)
+    split = _prep_concat(val)
 
     new_data = {}
     train = True
@@ -240,23 +246,6 @@ def concat_classes_after_split(base_dir,class_names,val=False,save=True,save_dir
     _save_dic(save_dir,new_data)
     _print_dic(new_data,print_)
     return list(new_data.keys())
-
-def _make_save_dirs(base_dir,save_dir,save_all):
-    if save_dir == None:
-        save_dir = base_dir
-    if save_all:
-        save_one = os.path.join(save_dir,'class_files')
-        save_two = os.path.join(save_dir,'class_files_split')
-        save_three = os.path.join(save_dir,'final_files')
-        if not os.path.exists(save_one):
-            os.mkdir(save_one)
-        if not os.path.exists(save_two):
-            os.mkdir(save_two)
-        if not os.path.exists(save_three):
-            os.mkdir(save_three)
-        return save_one, save_two, save_three
-    else:
-        return save_dir, save_dir, save_dir
     
 def from_folders_to_split(base_dir,print_=False,save_all=False,img=False,val=False,split_train=0.7,
         split_val=0.2,one_class=False,save_dir=None,which_class=None):
@@ -266,6 +255,5 @@ def from_folders_to_split(base_dir,print_=False,save_all=False,img=False,val=Fal
         class_dir = os.path.join(base_dir,class_name)
         saved_files = concat_one_folder(class_dir,print_,img,tag=class_name,save_dir=save_one)
         train = _is_train(one_class,class_name,which_class)
-        if train or val:
-            split_one_class(save_one,saved_files,train,val,split_train,split_val,save_all,save_two,class_name,print_)
+        split_one_class(save_one,saved_files,train,val,split_train,split_val,save_all,save_two,class_name,print_)
     return concat_classes_after_split(save_two,class_names,val,save_all,save_three,one_class,which_class,save_one,print_)
